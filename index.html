@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Profile</title>
+
+  <!-- Police Google & variables de thème -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --clr-bg: #f5f7fa;
+      --clr-card: #fff;
+      --clr-text: #111;
+      --clr-primary: #5b7cfa;
+      --clr-border: #e2e8f0;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --clr-bg: #121820;
+        --clr-card: #1e293b;
+        --clr-text: #f1f5f9;
+        --clr-border: #334155;
+      }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Inter", sans-serif;
+      background: var(--clr-bg);
+      color: var(--clr-text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .card {
+      background: var(--clr-card);
+      border: 1px solid var(--clr-border);
+      border-radius: .75rem;
+      max-width: 420px;
+      width: 100%;
+      padding: 2rem 2.5rem;
+      box-shadow: 0 6px 18px rgba(0,0,0,.05);
+    }
+
+    .card h1 { font-size: 1.5rem; margin-bottom: 1rem; }
+    .avatar {
+      width: 100px; height: 100px;
+      border-radius: 50%; object-fit: cover;
+      display: block; margin: 0 auto 1.25rem;
+    }
+
+    .field-label { font-weight: 600; }
+    .field-value { margin-bottom: 1rem; }
+
+    .field-edit {
+      width: 100%; padding: .55rem .75rem;
+      border: 1px solid var(--clr-border); border-radius: .5rem;
+      background: transparent; color: var(--clr-text); margin-bottom: 1rem;
+    }
+
+    button {
+      background: var(--clr-primary); color: #fff; border: none;
+      padding: .6rem 1.2rem; border-radius: .5rem;
+      cursor: pointer; width: 100%; font-weight: 600;
+      transition: background .2s;
+    }
+    button:hover { background: #4a65e0; }
+
+    /* Masquer/afficher les modes lecture et édition */
+    .hidden { display: none; }
+    .text-center { text-align: center; }
+  </style>
+</head>
+<body>
+
+  <!-- ==== CARTE LECTURE ==== -->
+  <main id="view-card" class="card">
+    <h1 class="text-center">User Profile</h1>
+    <img src="/profile-picture" alt="Profile picture" class="avatar" />
+    
+    <p class="field-label">Name</p>
+    <p id="name" class="field-value">–</p>
+    
+    <p class="field-label">Email</p>
+    <p id="email" class="field-value">–</p>
+    
+    <p class="field-label">Interests</p>
+    <p id="interests" class="field-value">–</p>
+
+    <button id="edit-btn">Edit profile</button>
+  </main>
+
+  <!-- ==== CARTE ÉDITION ==== -->
+  <main id="edit-card" class="card hidden">
+    <h1 class="text-center">Edit Profile</h1>
+    <img src="/profile-picture" alt="Profile picture" class="avatar" />
+
+    <label for="input-name" class="field-label">Name</label>
+    <input id="input-name" class="field-edit" type="text" />
+
+    <label for="input-email" class="field-label">Email</label>
+    <input id="input-email" class="field-edit" type="email" />
+
+    <label for="input-interests" class="field-label">Interests</label>
+    <input id="input-interests" class="field-edit" type="text" />
+
+    <button id="save-btn">Save changes</button>
+  </main>
+
+  <script>
+    const viewCard = document.getElementById("view-card");
+    const editCard = document.getElementById("edit-card");
+    const editBtn  = document.getElementById("edit-btn");
+    const saveBtn  = document.getElementById("save-btn");
+
+    // Champs lecture
+    const nameTxt  = document.getElementById("name");
+    const emailTxt = document.getElementById("email");
+    const intTxt   = document.getElementById("interests");
+
+    // Champs édition
+    const nameInp  = document.getElementById("input-name");
+    const emailInp = document.getElementById("input-email");
+    const intInp   = document.getElementById("input-interests");
+
+    /* ---------- Récupération du profil ---------- */
+    async function loadProfile() {
+      try {
+        const res = await fetch("/get-profile");
+        if (!res.ok) throw new Error("Server error");
+        const data = await res.json();
+
+        nameTxt.textContent  = data.name       || "N/A";
+        emailTxt.textContent = data.email      || "N/A";
+        intTxt.textContent   = data.interests  || "N/A";
+      } catch (err) {
+        alert("Impossible de charger le profil : " + err.message);
+      }
+    }
+
+    /* ---------- Basculer en mode édition ---------- */
+    editBtn.addEventListener("click", () => {
+      // pré-remplir le formulaire
+      nameInp.value  = nameTxt.textContent;
+      emailInp.value = emailTxt.textContent;
+      intInp.value   = intTxt.textContent;
+
+      viewCard.classList.add("hidden");
+      editCard.classList.remove("hidden");
+    });
+
+    /* ---------- Sauvegarder les modifications ---------- */
+    saveBtn.addEventListener("click", async () => {
+      const updated = {
+        name:      nameInp.value.trim(),
+        email:     emailInp.value.trim(),
+        interests: intInp.value.trim()
+      };
+      try {
+        const res = await fetch("/update-profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updated)
+        });
+        if (!res.ok) throw new Error("Save failed");
+        const data = await res.json();
+
+        // Mise à jour de l'affichage
+        nameTxt.textContent  = data.name || "N/A";
+        emailTxt.textContent = data.email || "N/A";
+        intTxt.textContent   = data.interests || "N/A";
+
+        // Retour au mode lecture
+        editCard.classList.add("hidden");
+        viewCard.classList.remove("hidden");
+      } catch (err) {
+        alert("Erreur lors de la sauvegarde : " + err.message);
+      }
+    });
+
+    /* ---------- Au chargement ---------- */
+    window.addEventListener("DOMContentLoaded", loadProfile);
+  </script>
+</body>
+</html>
